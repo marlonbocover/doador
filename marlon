@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Doações</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/frontend/css/styles.css">
+    <style>
+        body {
+            color: black;
+        }
+        .label-bold {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .address {
+            font-weight: bold;
+            text-transform: uppercase;
+            color: black;
+            padding: 10px;
+        }
+        #deliveryAddress,
+        #pickupLocation,
+        #items {
+            text-transform: uppercase;
+            color: black;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #deliveryAddress::placeholder {
+            color: black;
+            opacity: 0.7;
+        }
+        #deliveryAddress:focus,
+        #pickupLocation:focus,
+        #items:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: #007BFF;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Cadastro de Doações</h1>
+        <form id="donationForm" novalidate>
+            <div class="mb-3">
+                <label for="items" class="form-label">Itens a Doar</label>
+                <input type="text" class="form-control" id="items" name="items" placeholder="Ex: Roupas usadas, Calçados" required>
+            </div>
+            <div class="mb-3">
+                <label for="delivery" class="form-label">Você entrega ou precisa que retire?</label>
+                <select class="form-select" id="delivery" name="delivery" required>
+                    <option value="" disabled selected>Selecione uma opção</option>
+                    <option value="sim">Sim, eu entrego</option>
+                    <option value="nao">Não, preciso que retire</option>
+                </select>
+            </div>
+            <div class="mb-3" id="deliveryAddressContainer" style="display: none;">
+                <label for="deliveryAddress" class="form-label">Endereço de Entrega</label>
+                <select class="form-select" id="deliveryAddress" name="deliveryAddress" required>
+                    <option value="" disabled selected>Selecione um endereço</option>
+                    <option value="apa_lar_dos_idosos">APA Lar dos Idosos</option>
+                </select>
+                <div class="address" id="addressDisplay" style="display:none;"></div>
+            </div>
+            <div class="mb-3" id="pickupLocationContainer" style="display: none;">
+                <label for="pickupLocation" class="form-label">Local de Coleta</label>
+                <input type="text" class="form-control" id="pickupLocation" name="pickupLocation" placeholder="Digite o local da retirada" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Cadastrar Doação</button>
+        </form>
+        <div id="successDonationMessage" class="mt-3" style="display:none;">
+            <div class="alert alert-success" role="alert">
+                Doação cadastrada com sucesso!
+            </div>
+        </div>
+        <div id="errorDonationMessage" class="mt-3" style="display:none;">
+            <div class="alert alert-danger" role="alert">
+                Erro ao cadastrar doação. Por favor, tente novamente.
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h5>Entre em contato com a APA para qualquer dúvida:</h5>
+            <p>Telefone: <strong>(45) 3278-5352</strong></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        document.getElementById('delivery').addEventListener('change', function() {
+            const deliveryAddressContainer = document.getElementById('deliveryAddressContainer');
+            const pickupContainer = document.getElementById('pickupLocationContainer');
+            const addressDisplay = document.getElementById('addressDisplay');
+            
+            if (this.value === 'sim') {
+                deliveryAddressContainer.style.display = 'block';
+                pickupContainer.style.display = 'none';
+                addressDisplay.style.display = 'none';
+
+            } else if (this.value === 'nao') {
+                pickupContainer.style.display = 'block';
+                deliveryAddressContainer.style.display = 'none';
+                addressDisplay.style.display = 'none';
+            }
+        });
+
+        document.getElementById('donationForm').addEventListener('submit', function(event) {
+            // Validação de formulário
+            if (!this.checkValidity()) {
+                event.preventDefault(); // Evita o envio se o formulário não é válido
+                event.stopPropagation(); // Impede que o evento continue
+            }
+            this.classList.add('was-validated'); // Adiciona classe de validação
+        });
+
+        document.getElementById('donationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const items = document.getElementById('items').value;
+            const delivery = document.getElementById('delivery').value;
+            const pickupLocation = document.getElementById('pickupLocation').value;
+            const deliveryAddress = document.getElementById('deliveryAddress').value;
+
+            let data = { items, delivery };
+            if (delivery === 'nao') {
+                data.pickupLocation = pickupLocation;
+            } else if (delivery === 'sim') {
+                data.deliveryAddress = deliveryAddress;
+            }
+
+            try {
+                const response = await axios.post('/donations', data);
+                if (response.status === 200) {
+                    document.getElementById('successDonationMessage').style.display = 'block';
+                    document.getElementById('donationForm').reset();
+                    document.getElementById('pickupLocationContainer').style.display = 'none';
+                    document.getElementById('deliveryAddressContainer').style.display = 'none';
+                    document.getElementById('addressDisplay').style.display = 'none';
+                } else {
+                    throw new Error('Erro ao cadastrar doação.');
+                }
+            } catch (error) {
+                console.error('Erro ao cadastrar doação', error);
+                document.getElementById('errorDonationMessage').style.display = 'block';
+                document.getElementById('successDonationMessage').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+esse é o código donation.html
+
+const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
+const bcrypt = require('bcrypt');
+const Donor = require('./models/Donor');
+const Donation = require('./models/Donation');
+const Ngo = require('./models/Ngo');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware para analisar o corpo das requisições
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/frontend', express.static(path.join(__dirname, 'frontend')));
+
+// Configurar o EJS como motor de visualização
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Função para conectar ao MongoDB
+const connectToDatabase = async () => {
+  try {
+    await mongoose.connect('mongodb://localhost:27017/projeto_doador', {});
+    console.log('Conectado ao MongoDB');
+  } catch (err) {
+    console.error('Erro ao conectar ao MongoDB', err);
+  }
+};
+
+connectToDatabase();
+
+// Rota para a página principal (formulário de cadastro de doadores)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Rota para visualizar detalhes de um doador
+app.get('/donors/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const donor = await Donor.findById(id);
+    if (!donor) {
+      return res.status(404).send('Doador não encontrado');
+    }
+    const donations = await Donation.find({ donorId: id }).populate('ngoId');
+    res.render('donorDetails', { donor, donations });
+  } catch (error) {
+    console.error('Erro ao buscar doador:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+});
+
+// Rota para a página do formulário de doações
+app.get('/donationForm', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'donationForm.html'));
+});
+
+// Rota para a página principal (login)
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Rota para a página de doações (donation.html)
+app.get('/donations', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'donation.html'));
+});
+
+// Rota para listar todas as doações
+app.get('/donationList', async (req, res) => {
+  try {
+    const donations = await Donation.find().populate('ngoId');
+    res.render('donationList', { donations });
+  } catch (error) {
+    console.error('Erro ao listar doações:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+});
+
+// Rota para a página de lista de doações
+app.get('/donationListPage', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'donationList.html'));
+});
+
+// Rota para adicionar um doador
+app.post('/donors', async (req, res) => {
+  const { name, phone, address, password } = req.body;
+  try {
+    const existingDonor = await Donor.findOne({ phone });
+    if (existingDonor) {
+      return res.status(400).json({ message: 'Número de telefone já cadastrado.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const donor = new Donor({ name, phone, address, password: hashedPassword });
+    await donor.save();
+    res.status(201).json({ message: 'Doador cadastrado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao cadastrar doador:', error);
+    res.status(400).send('Erro ao cadastrar doador.');
+  }
+});
+
+// Rota para listar todos os doadores
+app.get('/donors', async (req, res) => {
+  try {
+    const donors = await Donor.find();
+    res.render('donors', { donors });
+  } catch (error) {
+    console.error('Erro ao listar doadores:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+});
+
+// Rota para adicionar uma doação
+app.post('/donations', async (req, res) => {
+  console.log('Dados recebidos:', req.body);
+  const { items, delivery, pickupLocation, deliveryAddress, ngoId, donorId } = req.body;
+
+  if (!items || !delivery || !ngoId || !donorId || (delivery === 'nao' && !pickupLocation) || (delivery === 'sim' && !deliveryAddress)) {
+    return res.status(400).json({ message: 'Todos os campos são obrigatórios e devem ser válidos.' });
+  }
+
+  try {
+    const donationItems = Array.isArray(items) ? items : [items];
+
+    const donation = new Donation({
+      items: donationItems,
+      delivery: delivery === 'true', // Convertendo para booleano
+      pickupLocation,
+      deliveryAddress,
+      ngoId,
+      donorId,
+    });
+
+    await donation.save();
+    res.status(201).json({ message: 'Doação cadastrada com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao cadastrar doação:', error);
+    res.status(400).send('Erro ao cadastrar doação.');
+  }
+});
+
+
+// Rota para realizar login
+app.post('/login', async (req, res) => {
+  const { phone, password } = req.body;
+  try {
+    const donor = await Donor.findOne({ phone });
+    if (!donor) {
+      return res.status(401).json({ message: 'Credenciais inválidas' });
+    }
+    const isPasswordValid = await bcrypt.compare(password, donor.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Credenciais inválidas' });
+    }
+    res.status(200).json({ message: 'Login realizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao realizar login:', error);
+    res.status(500).json({ message: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para adicionar uma ONG
+app.post('/ngos', async (req, res) => {
+  const { name, address } = req.body;
+  try {
+    const ngo = new Ngo({ name, address });
+    await ngo.save();
+    res.status(201).json({ message: 'ONG cadastrada com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao cadastrar ONG:', error);
+    res.status(400).send('Erro ao cadastrar ONG.');
+  }
+});
+
+// Rota para listar todas as ONGs
+app.get('/ngos', async (req, res) => {
+  try {
+    const ngos = await Ngo.find();
+    res.status(200).send(ngos);
+  } catch (error) {
+    console.error('Erro ao listar ONGs:', error);
+    res.status(500).send('Erro interno do servidor');
+  }
+});
+
+// Rota para atualizar uma doação
+app.put('/donations/:id', async (req, res) => {
+  const { id } = req.params;
+  const { items, delivery, pickupLocation, deliveryAddress, ngoId } = req.body;
+
+  try {
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({ message: 'Doação não encontrada.' });
+    }
+    donation.items = items || donation.items;
+    donation.delivery = delivery || donation.delivery;
+    donation.pickupLocation = pickupLocation || donation.pickupLocation;
+    donation.deliveryAddress = deliveryAddress || donation.deliveryAddress;
+    donation.ngoId = ngoId || donation.ngoId;
+
+    await donation.save();
+    res.json({ message: 'Doação atualizada com sucesso!', donation });
+  } catch (error) {
+    console.error('Erro ao atualizar doação:', error);
+    res.status(400).send('Erro ao atualizar doação.');
+  }
+});
+
+// Rota para excluir uma doação
+app.delete('/donations/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    console.log(`Tentando excluir a doação com ID: ${id}`);
+    const donation = await Donation.findById(id);
+    if (!donation) {
+      return res.status(404).json({ message: 'Doação não encontrada.' });
+    }
+
+    await donation.remove();
+    res.json({ message: 'Doação excluída com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao excluir doação:', error);
+    res.status(400).send('Erro ao excluir doação.');
+  }
+});
+
+// Iniciar o servidor
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+
+esse é o código app.js
+
+
+const mongoose = require('mongoose');
+
+const donationSchema = new mongoose.Schema({
+  items: {
+    type: [String], // Array de strings para os itens
+    required: [true, 'Itens são obrigatórios.'] // Mensagem de erro personalizada
+  },
+  delivery: {
+    type: String, // String para identificar se a entrega será feita
+    required: true,
+  },
+  pickupLocation: {
+    type: String,
+    required: function() { return this.delivery === 'não'; } // Apenas obrigatório se 'delivery' for 'não'
+  },
+  deliveryAddress: {
+    type: String,
+    required: function() { return this.delivery === 'sim'; } // Apenas obrigatório se 'delivery' for 'sim'
+  },
+  ngoId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Ngo',
+    required: [true, 'ONG é obrigatória.'], // Mensagem de erro personalizada
+  },
+  donorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Donor',
+    required: [true, 'Doador é obrigatório.'], // Mensagem de erro personalizada
+  }
+});
+
+const Donation = mongoose.model('Donation', donationSchema);
+
+module.exports = Donation;
+
+
+esse é o código Donation.js
+
+
